@@ -145,11 +145,12 @@ class upnp_device(object):
             self.client_sockets[client_socket.fileno()] = (client_socket, client_address)
         else:
             data, sender = self.client_sockets[fileno][0].recvfrom(4096)
-            if not data:
+            data_b = data.decode()
+            if not data_b:
                 self.poller.remove(self, fileno)
                 del(self.client_sockets[fileno])
             else:
-                self.handle_request(data, sender, self.client_sockets[fileno][0], self.client_sockets[fileno][1])
+                self.handle_request(data_b, sender, self.client_sockets[fileno][0], self.client_sockets[fileno][1])
 
     def handle_request(self, data, sender, socket, client_address):
         pass
@@ -217,7 +218,7 @@ class fauxmo(upnp_device):
                        "CONNECTION: close\r\n"
                        "\r\n"
                        "%s" % (len(xml), date_str, xml))
-            socket.send(message)
+            socket.send(message.encode())
         elif data.find('SOAPACTION: "urn:Belkin:service:basicevent:1#SetBinaryState"') != -1:
             success = False
             if data.find('<BinaryState>1</BinaryState>') != -1:
@@ -246,7 +247,7 @@ class fauxmo(upnp_device):
                            "CONNECTION: close\r\n"
                            "\r\n"
                            "%s" % (len(soap), date_str, soap))
-                socket.send(message)
+                socket.send(message.encode())
         else:
             dbg(data)
 
@@ -286,17 +287,17 @@ class upnp_broadcast_responder(object):
 
             try:
                 self.ssock.bind(('',self.port))
-            except Exception, e:
+            except Exception as e:
                 dbg("WARNING: Failed to bind %s:%d: %s" , (self.ip,self.port,e))
                 ok = False
 
             try:
                 self.ssock.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,self.mreq)
-            except Exception, e:
+            except Exception as e:
                 dbg('WARNING: Failed to join multicast group:',e)
                 ok = False
 
-        except Exception, e:
+        except Exception as e:
             dbg("Failed to initialize UPnP sockets:",e)
             return False
         if ok:
@@ -329,7 +330,7 @@ class upnp_broadcast_responder(object):
                 return self.ssock.recvfrom(size)
             else:
                 return False, False
-        except Exception, e:
+        except Exception as e:
             dbg(e)
             return False, False
 
@@ -350,11 +351,11 @@ class dummy_handler(object):
         self.name = name
 
     def on(self):
-        print self.name, "ON"
+        print (self.name, "ON")
         return True
 
     def off(self):
-        print self.name, "OFF"
+        print (self.name, "OFF")
         return True
 
 
@@ -402,6 +403,6 @@ if __name__ == "__main__":
             # Allow time for a ctrl-c to stop the process
             p.poll(100)
             time.sleep(0.1)
-        except Exception, e:
+        except Exception as e:
             dbg(e)
             break
